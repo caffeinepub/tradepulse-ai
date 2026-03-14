@@ -316,6 +316,14 @@ actor {
     await OutCall.httpGetRequest(url, [], transform);
   };
 
+  public shared ({ caller }) func fetchNewsData(currencies : Text) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can fetch news data");
+    };
+    let url = "https://cryptopanic.com/api/free/v1/posts/?public=true&currencies=" # currencies;
+    await OutCall.httpGetRequest(url, [], transform);
+  };
+
   public query ({ caller }) func getLatestTradeEntries() : async [(Text, ?Trade)] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view trade entries");
@@ -343,3 +351,4 @@ actor {
 
   initializeDefaultSymbols();
 };
+

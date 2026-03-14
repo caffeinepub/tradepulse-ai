@@ -190,6 +190,7 @@ export interface backendInterface {
     addPair(symbol: string, type: Variant_forex_crypto): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     fetchBinanceData(symbol: string, interval: string): Promise<string>;
+    fetchNewsData(currencies: string): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCandles(symbol: string, limit: bigint): Promise<Array<Candle>>;
@@ -277,6 +278,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.fetchBinanceData(arg0, arg1);
+            return result;
+        }
+    }
+    async fetchNewsData(arg0: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.fetchNewsData(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.fetchNewsData(arg0);
             return result;
         }
     }

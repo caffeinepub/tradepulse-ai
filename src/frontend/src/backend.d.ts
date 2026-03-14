@@ -107,6 +107,7 @@ export interface backendInterface {
     addPair(symbol: string, type: Variant_forex_crypto): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     fetchBinanceData(symbol: string, interval: string): Promise<string>;
+    fetchNewsData(currencies: string): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCandles(symbol: string, limit: bigint): Promise<Array<Candle>>;

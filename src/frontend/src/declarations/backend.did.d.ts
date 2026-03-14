@@ -94,6 +94,7 @@ export interface _SERVICE {
   >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'fetchBinanceData' : ActorMethod<[string, string], string>,
+  'fetchNewsData' : ActorMethod<[string], string>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCandles' : ActorMethod<[string, bigint], Array<Candle>>,

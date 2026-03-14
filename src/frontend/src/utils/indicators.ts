@@ -12,6 +12,7 @@ export interface SignalResult {
   rsi: number;
   macd: number;
   bbPosition: number; // 0-1 where price is in BB
+  newsSentiment?: number;
 }
 
 export function computeEMA(closes: number[], period: number): number[] {
@@ -110,10 +111,98 @@ export function computeSupportResistance(candles: Candle[]): {
   };
 }
 
-export function generateSignal(
+export function parseNewsSentiment(newsJson: string, symbol: string): number {
+  try {
+    const data = JSON.parse(newsJson);
+    const results: Array<{
+      title: string;
+      votes?: { positive?: number; negative?: number };
+    }> = data?.results || [];
+
+    // Map symbol to keywords
+    const symbolLower = symbol.toUpperCase();
+    let keywords: string[] = [];
+    if (symbolLower.includes("BTC")) keywords = ["bitcoin", "btc"];
+    else if (symbolLower.includes("ETH")) keywords = ["ethereum", "eth"];
+    else if (symbolLower.includes("BNB")) keywords = ["bnb", "binance"];
+    else if (symbolLower.includes("SOL")) keywords = ["solana", "sol"];
+    else if (symbolLower.includes("XRP")) keywords = ["xrp", "ripple"];
+    else if (symbolLower.includes("XAU") || symbolLower.includes("GOLD"))
+      keywords = ["gold", "xau"];
+    else if (
+      symbolLower.includes("USD") ||
+      symbolLower.includes("EUR") ||
+      symbolLower.includes("GBP")
+    ) {
+      keywords = ["dollar", "usd", "fed", "rate", "forex", "euro", "pound"];
+    } else keywords = ["crypto", "market"];
+
+    const bullishWords = [
+      "bullish",
+      "surge",
+      "rally",
+      "buy",
+      "adoption",
+      "breakout",
+      "gains",
+      "high",
+      "moon",
+      "pump",
+      "rise",
+      "soar",
+    ];
+    const bearishWords = [
+      "bearish",
+      "crash",
+      "dump",
+      "sell",
+      "ban",
+      "hack",
+      "drop",
+      "low",
+      "loss",
+      "fear",
+      "fall",
+      "decline",
+    ];
+
+    let totalScore = 0;
+    let count = 0;
+
+    for (const item of results) {
+      const title = (item.title || "").toLowerCase();
+      const isRelevant =
+        keywords.length === 0 || keywords.some((k) => title.includes(k));
+      if (!isRelevant) continue;
+
+      count++;
+      let itemScore = 0;
+
+      for (const w of bullishWords) if (title.includes(w)) itemScore += 1;
+      for (const w of bearishWords) if (title.includes(w)) itemScore -= 1;
+
+      // Vote-based score
+      const pos = item.votes?.positive || 0;
+      const neg = item.votes?.negative || 0;
+      const voteTotal = pos + neg;
+      if (voteTotal > 0) itemScore += ((pos - neg) / voteTotal) * 2;
+
+      totalScore += itemScore;
+    }
+
+    if (count === 0) return 0;
+    const avg = totalScore / count;
+    return Math.max(-1, Math.min(1, avg / 3));
+  } catch {
+    return 0;
+  }
+}
+
+export function generateSignalWithNews(
   candles: Candle[],
   balance: number,
   maxRiskPercent: number,
+  newsSentiment: number,
 ): SignalResult {
   if (candles.length < 30) {
     const entry = candles[candles.length - 1]?.close || 0;
@@ -129,6 +218,7 @@ export function generateSignal(
       rsi: 50,
       macd: 0,
       bbPosition: 0.5,
+      newsSentiment,
     };
   }
 
@@ -146,48 +236,42 @@ export function generateSignal(
   const lastEma20 = ema20[ema20.length - 1];
   const lastEma50 = ema50[ema50.length - 1];
 
-  // Scoring
   let score = 0;
   const maxScore = 6;
 
-  // RSI
-  if (rsi < 40)
-    score += 1; // oversold = bullish
-  else if (rsi > 60) score -= 1; // overbought = bearish
+  if (rsi < 40) score += 1;
+  else if (rsi > 60) score -= 1;
 
-  // MACD
   if (histogram > 0 && macd > macdSignal) score += 1;
   else if (histogram < 0 && macd < macdSignal) score -= 1;
 
-  // EMA trend
   if (lastEma20 > lastEma50) score += 1;
   else if (lastEma20 < lastEma50) score -= 1;
 
-  // Bollinger position
   const bbRange = bb.upper - bb.lower;
   const bbPosition = bbRange > 0 ? (entry - bb.lower) / bbRange : 0.5;
-  if (bbPosition < 0.25)
-    score += 1; // near lower band = bullish
-  else if (bbPosition > 0.75) score -= 1; // near upper band = bearish
+  if (bbPosition < 0.25) score += 1;
+  else if (bbPosition > 0.75) score -= 1;
 
-  // S/R proximity
   const range = resistance - support;
   if (range > 0) {
     const pos = (entry - support) / range;
-    if (pos < 0.3)
-      score += 1; // near support = bullish
-    else if (pos > 0.7) score -= 1; // near resistance = bearish
+    if (pos < 0.3) score += 1;
+    else if (pos > 0.7) score -= 1;
   }
 
-  // Volume trend (simple: last candle volume vs avg)
   const avgVol = candles.slice(-10).reduce((s, c) => s + c.volume, 0) / 10;
   const lastVol = candles[candles.length - 1].volume;
   if (lastVol > avgVol * 1.2) {
     score += closes[closes.length - 1] > closes[closes.length - 2] ? 1 : -1;
   }
 
-  const normalizedScore = (score + maxScore) / (2 * maxScore); // 0 to 1
-  const probability = Math.round(normalizedScore * 100);
+  const normalizedScore = (score + maxScore) / (2 * maxScore);
+  let probability = Math.round(normalizedScore * 100);
+
+  // Adjust by news sentiment: sentiment -1..+1 shifts by up to 15 points
+  const newsAdjust = Math.round(newsSentiment * 15);
+  probability = Math.max(0, Math.min(100, probability + newsAdjust));
 
   let direction: "BUY" | "SELL" | "HOLD";
   if (probability >= 60) direction = "BUY";
@@ -213,8 +297,6 @@ export function generateSignal(
   const tpDistance = Math.abs(tp - entry);
   const rrRatio = slDistance > 0 ? tpDistance / slDistance : 2;
 
-  // Lot size: (balance * riskPct%) / (slDistance * pip_value)
-  // For crypto/forex simplified: use slDistance as pip move
   const riskAmount = (balance * maxRiskPercent) / 100;
   let lotSize = slDistance > 0 ? riskAmount / (slDistance * 10) : 0.01;
   lotSize = Math.max(0.01, Math.min(10, Math.round(lotSize * 100) / 100));
@@ -236,7 +318,16 @@ export function generateSignal(
     rsi: Math.round(rsi),
     macd: Math.round(macd * 10000) / 10000,
     bbPosition: Math.round(bbPosition * 100) / 100,
+    newsSentiment,
   };
+}
+
+export function generateSignal(
+  candles: Candle[],
+  balance: number,
+  maxRiskPercent: number,
+): SignalResult {
+  return generateSignalWithNews(candles, balance, maxRiskPercent, 0);
 }
 
 export function playSignalSound() {
@@ -259,7 +350,6 @@ export function playSignalSound() {
 
 export function formatPrice(price: number, symbol?: string): string {
   if (!price) return "0.00";
-  // Forex pairs have more decimals
   const isForex =
     symbol &&
     !symbol.includes("BTC") &&
