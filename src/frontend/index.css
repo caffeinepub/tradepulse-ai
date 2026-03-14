@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: oklch(0.10 0.02 240);
+    --foreground: oklch(0.92 0.02 220);
+    --card: oklch(0.13 0.02 240);
+    --card-foreground: oklch(0.92 0.02 220);
+    --popover: oklch(0.13 0.02 240);
+    --popover-foreground: oklch(0.92 0.02 220);
+    --primary: oklch(0.72 0.18 185);
+    --primary-foreground: oklch(0.10 0.02 240);
+    --secondary: oklch(0.18 0.025 240);
+    --secondary-foreground: oklch(0.85 0.02 220);
+    --muted: oklch(0.18 0.025 240);
+    --muted-foreground: oklch(0.55 0.02 220);
+    --accent: oklch(0.72 0.18 185);
+    --accent-foreground: oklch(0.10 0.02 240);
+    --destructive: oklch(0.60 0.22 25);
+    --destructive-foreground: oklch(0.98 0.01 0);
+    --border: oklch(0.22 0.025 240);
+    --input: oklch(0.18 0.025 240);
+    --ring: oklch(0.72 0.18 185);
+    --radius: 0.5rem;
+    --chart-1: oklch(0.72 0.18 185);
+    --chart-2: oklch(0.65 0.20 145);
+    --chart-3: oklch(0.60 0.22 25);
+    --chart-4: oklch(0.75 0.18 50);
+    --chart-5: oklch(0.68 0.18 280);
+    --sidebar-background: oklch(0.11 0.02 240);
+    --sidebar-foreground: oklch(0.85 0.02 220);
+    --sidebar-primary: oklch(0.72 0.18 185);
+    --sidebar-primary-foreground: oklch(0.10 0.02 240);
+    --sidebar-accent: oklch(0.16 0.025 240);
+    --sidebar-accent-foreground: oklch(0.85 0.02 220);
+    --sidebar-border: oklch(0.20 0.025 240);
+    --sidebar-ring: oklch(0.72 0.18 185);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+.signal-buy {
+  color: oklch(0.72 0.20 145);
+}
+.signal-sell {
+  color: oklch(0.60 0.22 25);
+}
+.signal-buy-bg {
+  background-color: oklch(0.72 0.20 145 / 0.15);
+  border-color: oklch(0.72 0.20 145 / 0.4);
+}
+.signal-sell-bg {
+  background-color: oklch(0.60 0.22 25 / 0.15);
+  border-color: oklch(0.60 0.22 25 / 0.4);
+}
+.glow-teal {
+  box-shadow: 0 0 20px oklch(0.72 0.18 185 / 0.2);
+}
+.glow-green {
+  box-shadow: 0 0 12px oklch(0.72 0.20 145 / 0.3);
+}
+.glow-red {
+  box-shadow: 0 0 12px oklch(0.60 0.22 25 / 0.3);
+}
