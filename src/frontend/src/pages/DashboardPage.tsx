@@ -205,7 +205,6 @@ export default function DashboardPage() {
           selectedInterval,
         );
         const newCandles = parseBinanceKlines(raw, selectedPair);
-        await actor.addOrUpdateCandles(selectedPair, newCandles);
         return newCandles;
       } catch {
         return actor.getCandles(selectedPair, BigInt(100));
